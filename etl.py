@@ -7,51 +7,51 @@ from sql_queries import *
 
 def process_song_file(cur, filepath):
     """
-    Description: This function can be used to read the file in the filepath (data/song_data) 
+    Description: This function can be used to read the file in the filepath (data/song_data)
     to get the song and artist info and used to populate the song and artist dim tables.
 
     Arguments:
-        cur: the cursor object. 
-        filepath: log data file path. 
+        cur: the cursor object.
+        filepath: log data file path.
 
     Returns:
         None
     """
     # open song file
     df = pd.read_json(open(
-        filepath, 
-        "r", 
-        encoding="utf8"), 
+        filepath,
+        "r",
+        encoding="utf8"),
                       lines=True)
 
     # insert song record
     song_data = list(df[[
-        'song_id', 
-        'title', 
-        'artist_id', 
-        'year', 
+        'song_id',
+        'title',
+        'artist_id',
+        'year',
         'duration'
     ]].values[0])
     cur.execute(song_table_insert, song_data)
-    
+
     # insert artist record
     artist_data = list(df[[
-        'artist_id', 
-        'artist_name', 
-        'artist_location', 
-        'artist_latitude', 
+        'artist_id',
+        'artist_name',
+        'artist_location',
+        'artist_latitude',
         'artist_longitude']].values[0])
     cur.execute(artist_table_insert, artist_data)
 
 
 def process_log_file(cur, filepath):
     """
-    Description: This function can be used to read the file in the filepath (data/log_data) 
+    Description: This function can be used to read the file in the filepath (data/log_data)
     to get the user and time info and used to populate the users and time dim tables.
 
     Arguments:
-        cur: the cursor object. 
-        filepath: log data file path. 
+        cur: the cursor object.
+        filepath: log data file path.
 
     Returns:
         None
@@ -64,7 +64,7 @@ def process_log_file(cur, filepath):
 
     # convert timestamp column to datetime
     t = pd.to_datetime(df['ts'],unit='ms').reset_index(drop=True)
-    
+
     # insert time data records
     hour = t.dt.hour
     day = t.dt.day
@@ -75,18 +75,18 @@ def process_log_file(cur, filepath):
     time_data = (t, hour, day, week, month, year, weekday)
     column_labels = (
         'timestamp',
-        'hour', 
-        'day', 
-        'week', 
-        'month', 
-        'year', 
+        'hour',
+        'day',
+        'week',
+        'month',
+        'year',
         'weekday',
     )
     time_dict = {}
     for x in range(len(column_labels)):
         time_dict[column_labels[x]] = time_data[x]
     time_df = pd.DataFrame(time_dict)
-    
+
 
     for i, row in time_df.iterrows():
         cur.execute(time_table_insert, list(row))
@@ -104,7 +104,7 @@ def process_log_file(cur, filepath):
         # get songid and artistid from song and artist tables
         cur.execute(song_select, (row.song, row.artist, row.length))
         results = cur.fetchone()
-        
+
         if results:
             songid, artistid = results
         else:
@@ -113,8 +113,8 @@ def process_log_file(cur, filepath):
         # insert songplay record
         songplay_data = (
         pd.to_datetime(row['ts'], unit='ms'),
-        row['userId'], 
-        row['level'], 
+        row['userId'],
+        row['level'],
         songid,
         artistid,
         row['sessionId'],
@@ -130,7 +130,7 @@ def process_data(cur, conn, filepath, func):
     It then passes the files to the process_log_file or process_song_file functions
 
     Arguments:
-        cur: the cursor object. 
+        cur: the cursor object.
         conn: the connection object.
         filepath: log data file path.
         func: function to populate tables.
@@ -159,13 +159,13 @@ def process_data(cur, conn, filepath, func):
 def main():
     """
     - Establishes connection with the sparkify database and gets
-    cursor to it.  
-    
+    cursor to it.
+
     - passes all files in data/song_data to the process_song_file function.
-    
+
     - passes all files in data/log_data to the process_log_file function.
     """
-    conn = psycopg2.connect("host=127.0.0.1 dbname=sparkifydb user=student password=student")
+    conn = psycopg2.connect(f'host=127.0.0.1 dbname=sparkifydb user={os.environ['db_user']} password={os.environ['db_home']}')
     cur = conn.cursor()
 
     process_data(cur, conn, filepath='data/song_data', func=process_song_file)
